@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -36,8 +37,16 @@ class Settings(BaseSettings):
             return v.replace("postgresql://", "postgresql+asyncpg://", 1)
         return v
 
-    # Anthropic / LLM
+    # LLM provider selection
+    llm_provider: Literal["anthropic", "gemini"] = "gemini"
+
+    # Anthropic
     anthropic_api_key: str = ""
+
+    # Google Gemini
+    google_api_key: str = ""
+
+    # Shared LLM settings
     llm_max_file_size_mb: int = 10
     llm_max_pages: int = 20
     llm_max_tokens: int = 256
