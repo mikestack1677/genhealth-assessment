@@ -42,6 +42,4 @@ RUN printf '#!/bin/sh\nset -e\nalembic upgrade head\nexec uvicorn genhealth.main
 
 USER appuser
 
-EXPOSE 8000
-
 CMD ["/bin/sh", "/app/start.sh"]
