@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { mockGet, mockPost, mockPatch, mockDelete } = vi.hoisted(() => ({
+const { mockGet, mockPost, mockPut, mockDelete } = vi.hoisted(() => ({
   mockGet: vi.fn(),
   mockPost: vi.fn(),
-  mockPatch: vi.fn(),
+  mockPut: vi.fn(),
   mockDelete: vi.fn(),
 }));
 
@@ -11,7 +11,7 @@ vi.mock("./client", () => ({
   default: {
     get: mockGet,
     post: mockPost,
-    patch: mockPatch,
+    put: mockPut,
     delete: mockDelete,
   },
 }));
@@ -74,10 +74,10 @@ describe("orders API", () => {
     expect(result).toEqual(mockOrder);
   });
 
-  it("updateOrder calls PATCH /orders/:id", async () => {
-    mockPatch.mockResolvedValueOnce({ data: mockOrder });
+  it("updateOrder calls PUT /orders/:id", async () => {
+    mockPut.mockResolvedValueOnce({ data: mockOrder });
     const result = await updateOrder("order-1", { notes: "updated" });
-    expect(mockPatch).toHaveBeenCalledWith("/orders/order-1", { notes: "updated" });
+    expect(mockPut).toHaveBeenCalledWith("/orders/order-1", { notes: "updated" });
     expect(result).toEqual(mockOrder);
   });
 

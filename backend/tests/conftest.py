@@ -77,7 +77,7 @@ async def db_session(test_engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
 @pytest.fixture
 async def client(test_engine: AsyncEngine) -> AsyncIterator[AsyncClient]:
     """HTTP test client with database and LLM provider dependency overrides."""
-    from unittest.mock import MagicMock
+    from unittest.mock import AsyncMock
 
     from genhealth.core.database import get_session
     from genhealth.main import app
@@ -95,7 +95,7 @@ async def client(test_engine: AsyncEngine) -> AsyncIterator[AsyncClient]:
 
     def override_get_llm_provider() -> LLMProvider:
         """Return a no-op mock provider so tests don't need real API credentials."""
-        return MagicMock(spec=LLMProvider)
+        return AsyncMock(spec=LLMProvider)
 
     app.dependency_overrides[get_session] = override_get_session
     app.dependency_overrides[get_llm_provider] = override_get_llm_provider

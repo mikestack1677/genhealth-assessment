@@ -19,7 +19,7 @@ export async function createOrder(data: OrderCreate): Promise<Order> {
 }
 
 export async function updateOrder(id: string, data: OrderUpdate): Promise<Order> {
-  const response = await client.patch<Order>(`/orders/${id}`, data);
+  const response = await client.put<Order>(`/orders/${id}`, data);
   return response.data;
 }
 

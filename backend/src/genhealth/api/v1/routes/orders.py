@@ -4,7 +4,7 @@ import uuid  # noqa: TC003 — FastAPI resolves uuid.UUID path parameters via ge
 from typing import Annotated
 
 import structlog
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import (
@@ -34,8 +34,8 @@ def get_document_service(provider: Annotated[LLMProvider, Depends(get_llm_provid
 @router.get("/orders", response_model=PaginatedResponse[OrderResponse])
 async def list_orders(
     session: Annotated[AsyncSession, Depends(get_session)],
-    page: int = 1,
-    page_size: int = 20,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> PaginatedResponse[OrderResponse]:
     """List orders with pagination."""
     service = OrderService(session)
