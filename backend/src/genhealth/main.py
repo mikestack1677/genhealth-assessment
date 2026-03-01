@@ -20,6 +20,7 @@ from genhealth.api.v1.routes.health import router as health_router
 from genhealth.api.v1.routes.orders import router as orders_router
 from genhealth.core.logging import setup_logging
 from genhealth.middleware.activity_log import ActivityLogMiddleware
+from genhealth.middleware.basic_auth import BasicAuthMiddleware
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
     )
 
     application.add_middleware(ActivityLogMiddleware)  # type: ignore[arg-type]
+    application.add_middleware(BasicAuthMiddleware)  # type: ignore[arg-type]
 
     application.include_router(health_router, prefix="/api/v1", tags=["health"])
     application.include_router(orders_router, prefix="/api/v1", tags=["orders"])

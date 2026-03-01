@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     google_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash-lite"
 
+    # HTTP Basic Auth (leave password empty to disable)
+    basic_auth_user: str = "genhealth"
+    basic_auth_password: str = ""
+
     # Shared LLM settings
     llm_max_file_size_mb: int = 10
     llm_max_pages: int = 20
