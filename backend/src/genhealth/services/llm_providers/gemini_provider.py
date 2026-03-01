@@ -33,7 +33,10 @@ class GeminiProvider(LLMProvider):
 
     def __init__(self) -> None:
         self._settings = get_settings()
-        self._client = genai.Client(api_key=self._settings.google_api_key)
+        self._client = genai.Client(
+            api_key=self._settings.google_api_key,
+            http_options=types.HttpOptions(api_version="v1"),
+        )
 
     async def extract(self, pdf_bytes: bytes, filename: str) -> str:
         """Send PDF to Gemini with exponential backoff retry on transient errors.
