@@ -15,9 +15,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /app
 COPY backend/pyproject.toml backend/uv.lock ./
-RUN uv sync --frozen --no-dev --no-editable
+RUN uv sync --frozen --no-dev --no-install-project
 
 COPY backend/src/ src/
+RUN uv sync --frozen --no-dev --no-editable
 
 # ─── Runtime ──────────────────────────────────────────────────────────────────
 FROM python:3.12-slim
