@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { createOrder, deleteOrder, listOrders, updateOrder } from "../../api/orders";
-import type { Order, OrderCreate } from "../../api/types";
+import type { ExtractedPatientData, Order, OrderCreate } from "../../api/types";
 import { OrderForm } from "../../components/OrderForm/OrderForm";
 import { OrderTable } from "../../components/OrderTable/OrderTable";
 import { Pagination } from "../../components/Pagination/Pagination";
@@ -116,7 +116,22 @@ export function OrdersPage() {
         >
           {showUpload ? "Hide" : "Extract from PDF"}
         </button>
-        {showUpload && <UploadCard onSuccess={() => {}} />}
+        {showUpload && (
+          <UploadCard
+            onSuccess={(result) => {
+              if ("first_name" in result) {
+                const extracted = result as ExtractedPatientData;
+                createMutation.mutate({
+                  patient_first_name: extracted.first_name ?? undefined,
+                  patient_last_name: extracted.last_name ?? undefined,
+                  patient_dob: extracted.date_of_birth ?? undefined,
+                  status: "pending",
+                });
+                setShowUpload(false);
+              }
+            }}
+          />
+        )}
       </div>
 
       {showForm && (
