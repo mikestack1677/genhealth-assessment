@@ -1,0 +1,145 @@
+[project]
+name = "genhealth"
+version = "0.1.0"
+description = "GenHealth assessment: document extraction API"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "structlog>=24.4.0",
+    "uuid7>=0.1.0",
+    "anthropic>=0.40.0",
+    "python-multipart>=0.0.20",
+    "slowapi>=0.1.9",
+    "pypdf>=5.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.0.0",
+    "httpx>=0.28.0",
+    "psycopg2-binary>=2.9.0",
+    "ruff>=0.9.0",
+    "ty>=0.0.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/genhealth"]
+
+[tool.ruff]
+target-version = "py312"
+src = ["src", "tests"]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort
+    "N",     # pep8-naming
+    "UP",    # pyupgrade
+    "B",     # flake8-bugbear
+    "SIM",   # flake8-simplify
+    "TC",    # flake8-type-checking
+    "RUF",   # ruff-specific
+    "ASYNC", # flake8-async
+    "S",     # flake8-bandit
+    "T20",   # flake8-print
+    "FAST",  # fastapi
+    "YTT",   # flake8-2020 (sys.version checks)
+    "ANN",   # flake8-annotations
+    "BLE",   # flake8-blind-except
+    "FBT",   # flake8-boolean-trap
+    "A",     # flake8-builtins
+    "C4",    # flake8-comprehensions
+    # "CPY", # flake8-copyright — requires ruff preview mode; enforced by addlicense instead
+    "DTZ",   # flake8-datetimez (naive datetime prevention)
+    "T10",   # flake8-debugger
+    "EM",    # flake8-errmsg
+    "FA",    # flake8-future-annotations
+    "ISC",   # flake8-implicit-str-concat
+    "ICN",   # flake8-import-conventions
+    "LOG",   # flake8-logging
+    "G",     # flake8-logging-format
+    "INP",   # flake8-no-pep420 (implicit namespace packages)
+    "PIE",   # flake8-pie
+    "PYI",   # flake8-pyi (type stub files)
+    "PT",    # flake8-pytest-style
+    "Q",     # flake8-quotes
+    "RSE",   # flake8-raise
+    "RET",   # flake8-return
+    "SLF",   # flake8-self
+    "TID",   # flake8-tidy-imports
+    "ARG",   # flake8-unused-arguments
+    "PTH",   # flake8-use-pathlib
+    "FLY",   # flynt (f-string conversion)
+    "C90",   # mccabe (complexity)
+    "PERF",  # perflint
+    "PGH",   # pygrep-hooks
+    "PL",    # pylint (all sub-categories: PLC, PLE, PLR, PLW)
+    "FURB",  # refurb
+    "TRY",   # tryceratops
+]
+ignore = [
+    "B008",    # FastAPI uses Depends() in function defaults by design
+    "ANN401",  # Dynamically typed expressions (typing.Any) — needed for FastAPI dependencies
+    "ISC001",  # Implicit string concatenation on single line — conflicts with ruff formatter
+    "TRY003",  # Long exception messages — overly strict for application code
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",    # assert is the standard way to write tests
+    "ARG",     # unused arguments common in fixtures and parametrize
+    "SLF001",  # tests legitimately access private members
+    "PLR2004", # magic values in assertions are fine in tests
+]
+"src/genhealth/models/*.py" = [
+    "TC003",   # SQLAlchemy needs uuid/datetime at runtime for Mapped[] annotation resolution
+]
+"alembic/**/*.py" = [
+    "INP001",  # alembic directory is not a package
+    "ANN",     # alembic-generated code doesn't need full annotations
+]
+"src/genhealth/core/database.py" = [
+    "PLW0603", # global statement needed for lazy singleton pattern
+    "PLC0415", # deferred imports avoid import-time DB connections
+]
+"src/genhealth/main.py" = [
+    "PLC0415", # deferred imports in lifespan avoid eager engine creation
+]
+"tests/conftest.py" = [
+    "PLC0415", # deferred imports in fixtures avoid eager engine creation
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["genhealth"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+addopts = "--strict-markers"
+
+[tool.coverage.run]
+source = ["src/genhealth"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.",
+]
