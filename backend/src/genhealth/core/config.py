@@ -45,6 +45,7 @@ class Settings(BaseSettings):
 
     # Google Gemini
     google_api_key: str = ""
+    gemini_model: str = "gemini-1.5-flash"
 
     # Shared LLM settings
     llm_max_file_size_mb: int = 10

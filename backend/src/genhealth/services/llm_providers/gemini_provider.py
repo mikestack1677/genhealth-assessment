@@ -24,8 +24,6 @@ If a field cannot be found, use null for that field.
 Do not include any text outside the JSON object.
 """.strip()
 
-_GEMINI_MODEL = "gemini-2.0-flash"
-
 # HTTP status code for rate limiting
 _HTTP_RATE_LIMIT = 429
 
@@ -100,7 +98,7 @@ class GeminiProvider(LLMProvider):
     async def _call_api(self, pdf_bytes: bytes, filename: str) -> str:  # noqa: ARG002 — filename reserved for future logging
         """Make a single Gemini API call and return the raw text response."""
         response = await self._client.aio.models.generate_content(
-            model=_GEMINI_MODEL,
+            model=self._settings.gemini_model,
             contents=[
                 types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf"),
                 types.Part.from_text(text=_EXTRACT_PROMPT),
