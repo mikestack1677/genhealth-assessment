@@ -1,0 +1,29 @@
+pre-commit:
+  parallel: true
+  commands:
+    ruff-lint:
+      glob: "*.py"
+      root: "backend/"
+      run: uv run ruff check --fix {staged_files}
+      stage_fixed: true
+
+    ruff-format:
+      glob: "*.py"
+      root: "backend/"
+      run: uv run ruff format {staged_files}
+      stage_fixed: true
+
+    ty-check:
+      glob: "*.py"
+      root: "backend/"
+      run: uv run ty check
+
+    biome-check:
+      glob: "*.{ts,tsx,js,jsx,json}"
+      root: "frontend/"
+      run: pnpm biome check --write {staged_files}
+      stage_fixed: true
+
+    tsc-check:
+      root: "frontend/"
+      run: pnpm tsc --noEmit
