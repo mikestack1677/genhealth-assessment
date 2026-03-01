@@ -1,0 +1,41 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+*.egg-info/
+dist/
+build/
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ty_cache/
+
+# Node
+node_modules/
+dist/
+.pnpm-store/
+
+# Uploads (local dev only)
+backend/uploads/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Zone identifiers (WSL artifact)
+*.Zone.Identifier
