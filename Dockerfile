@@ -36,9 +36,8 @@ COPY backend/alembic/ alembic/
 ENV PATH="/app/.venv/bin:$PATH"
 ENV STATIC_DIR=/app/static
 
-# Startup script — handles Railway's $PORT injection and migration
-RUN printf '#!/bin/sh\nset -e\nalembic upgrade head\nexec uvicorn genhealth.main:app --host 0.0.0.0 --port "${PORT:-8000}"\n' > /app/start.sh \
-    && chmod +x /app/start.sh
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
 USER appuser
 
