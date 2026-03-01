@@ -250,7 +250,7 @@ async def test_call_claude_sends_request_and_parses() -> None:
     mock_response = MagicMock()
     mock_response.content = [mock_content]
 
-    service._client.messages.create = AsyncMock(return_value=mock_response)
+    service._client.messages.create = AsyncMock(return_value=mock_response)  # type: ignore[assignment]
 
     pdf_bytes = _make_minimal_pdf()
     result = await service._call_claude(pdf_bytes, "test.pdf")
@@ -269,7 +269,7 @@ async def test_call_claude_empty_content() -> None:
     mock_response = MagicMock()
     mock_response.content = []
 
-    service._client.messages.create = AsyncMock(return_value=mock_response)
+    service._client.messages.create = AsyncMock(return_value=mock_response)  # type: ignore[assignment]
 
     result = await service._call_claude(b"pdf", "test.pdf")
     assert result.first_name is None
