@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Walk up from this file to find the nearest .env file
@@ -26,6 +27,14 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = "postgresql+asyncpg://genhealth:genhealth_dev@localhost:5433/genhealth"
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def ensure_asyncpg_driver(cls, v: str) -> str:
+        """Rewrite postgresql:// → postgresql+asyncpg:// (Railway injects the plain URL)."""
+        if isinstance(v, str) and v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
 
     # Anthropic / LLM
     anthropic_api_key: str = ""
