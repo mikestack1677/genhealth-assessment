@@ -11,16 +11,24 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,  # noqa: TC002 — FastAPI resolves Annotated[AsyncSession, Depends(...)] via get_type_hints() at runtime
 )
 
-from genhealth.core.config import Settings, get_settings
 from genhealth.core.database import get_session
 from genhealth.schemas.common import PaginatedResponse
 from genhealth.schemas.order import OrderCreate, OrderDocumentAttach, OrderResponse, OrderUpdate
 from genhealth.services.document_service import DocumentService
+from genhealth.services.llm_providers import get_llm_provider
+from genhealth.services.llm_providers.base import (
+    LLMProvider,  # noqa: TC001 — FastAPI resolves Annotated[LLMProvider, Depends(...)] via get_type_hints() at runtime
+)
 from genhealth.services.order_service import OrderService
 
 logger = structlog.get_logger()
 limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
+
+
+def get_document_service(provider: Annotated[LLMProvider, Depends(get_llm_provider)]) -> DocumentService:
+    """FastAPI dependency: construct DocumentService with the configured LLM provider."""
+    return DocumentService(provider)
 
 
 @router.get("/orders", response_model=PaginatedResponse[OrderResponse])
@@ -91,12 +99,10 @@ async def delete_order(
 async def upload_document(
     order_id: uuid.UUID,
     session: Annotated[AsyncSession, Depends(get_session)],
-    settings: Annotated[Settings, Depends(get_settings)],
     file: Annotated[UploadFile, File(...)],
+    doc_service: Annotated[DocumentService, Depends(get_document_service)],
 ) -> OrderResponse:
     """Upload a PDF document, extract patient data, and attach it to the order."""
-    _ = settings  # available for rate-limit config; limiter applied at app level
-
     if file.content_type not in {"application/pdf", "application/octet-stream"}:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -106,7 +112,6 @@ async def upload_document(
     pdf_bytes = await file.read()
     filename = file.filename or "document.pdf"
 
-    doc_service = DocumentService()
     extracted = await doc_service.extract_patient_data(pdf_bytes, filename)
 
     doc_payload = OrderDocumentAttach(

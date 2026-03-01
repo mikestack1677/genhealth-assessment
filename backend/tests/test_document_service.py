@@ -6,12 +6,12 @@ import json
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import anthropic
 import pytest
 from fastapi import HTTPException
 
 from genhealth.schemas.document import ExtractedPatientData
 from genhealth.services.document_service import DocumentService
+from genhealth.services.llm_providers.base import LLMProvider
 
 
 def _make_minimal_pdf() -> bytes:
@@ -40,9 +40,9 @@ startxref
 
 
 def _make_service() -> DocumentService:
-    """Create a DocumentService with a mocked Anthropic client."""
-    with patch("genhealth.services.document_service.anthropic.AsyncAnthropic"):
-        return DocumentService()
+    """Create a DocumentService with a mock LLMProvider."""
+    mock_provider = MagicMock(spec=LLMProvider)
+    return DocumentService(mock_provider)
 
 
 # ---------------------------------------------------------------------------
@@ -163,114 +163,68 @@ def test_parse_response_partial_fields() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _call_claude_with_retry
+# extract_patient_data — delegation to provider
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_call_claude_with_retry_success_first_attempt() -> None:
-    """Claude succeeds on first attempt with no retries."""
-    service = _make_service()
-    expected = ExtractedPatientData(first_name="Jane", last_name="Doe")
-    with patch.object(service, "_call_claude", new_callable=AsyncMock, return_value=expected):
-        result = await service._call_claude_with_retry(b"pdf", "test.pdf")
-    assert result.first_name == "Jane"
+async def test_extract_patient_data_delegates_to_provider() -> None:
+    """extract_patient_data validates, calls provider.extract, and parses the result."""
+    mock_provider = MagicMock(spec=LLMProvider)
+    raw_json = json.dumps({"first_name": "Jane", "last_name": "Doe", "date_of_birth": "1990-05-20"})
+    mock_provider.extract = AsyncMock(return_value=raw_json)
 
-
-@pytest.mark.asyncio
-async def test_call_claude_with_retry_on_rate_limit() -> None:
-    """Claude retries on RateLimitError and succeeds on second attempt."""
-    service = _make_service()
-    expected = ExtractedPatientData(first_name="Retry")
-    mock_call = AsyncMock(
-        side_effect=[
-            anthropic.RateLimitError(message="rate limited", response=MagicMock(status_code=429), body={}),
-            expected,
-        ]
-    )
-    with (
-        patch.object(service, "_call_claude", mock_call),
-        patch("genhealth.services.document_service.asyncio.sleep", new_callable=AsyncMock),
-    ):
-        result = await service._call_claude_with_retry(b"pdf", "test.pdf")
-    assert result.first_name == "Retry"
-    assert mock_call.call_count == 2
-
-
-@pytest.mark.asyncio
-async def test_call_claude_with_retry_exhausted() -> None:
-    """All retry attempts exhausted raises HTTPException 422."""
-    service = _make_service()
-    mock_call = AsyncMock(
-        side_effect=anthropic.RateLimitError(message="rate limited", response=MagicMock(status_code=429), body={})
-    )
-    with (
-        patch.object(service, "_call_claude", mock_call),
-        patch("genhealth.services.document_service.asyncio.sleep", new_callable=AsyncMock),
-        pytest.raises(HTTPException) as exc_info,
-    ):
-        await service._call_claude_with_retry(b"pdf", "test.pdf")
-    assert exc_info.value.status_code == 422
-    assert "attempts" in exc_info.value.detail.lower()
-
-
-@pytest.mark.asyncio
-async def test_call_claude_with_retry_api_error_no_retry() -> None:
-    """Non-transient APIError raises HTTPException immediately without retry."""
-    service = _make_service()
-    mock_call = AsyncMock(
-        side_effect=anthropic.APIError(
-            message="bad request",
-            request=MagicMock(),
-            body={"error": {"type": "invalid_request_error", "message": "bad"}},
-        )
-    )
-    with (
-        patch.object(service, "_call_claude", mock_call),
-        pytest.raises(HTTPException) as exc_info,
-    ):
-        await service._call_claude_with_retry(b"pdf", "test.pdf")
-    assert exc_info.value.status_code == 422
-    assert mock_call.call_count == 1
-
-
-# ---------------------------------------------------------------------------
-# _call_claude
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_call_claude_sends_request_and_parses() -> None:
-    """_call_claude sends a request to Anthropic and parses the response."""
-    service = _make_service()
-
-    mock_content = MagicMock()
-    mock_content.text = '{"first_name": "Claude", "last_name": "Test", "date_of_birth": "2000-01-01"}'
-
-    mock_response = MagicMock()
-    mock_response.content = [mock_content]
-
-    service._client.messages.create = AsyncMock(return_value=mock_response)  # type: ignore[assignment]
-
+    service = DocumentService(mock_provider)
     pdf_bytes = _make_minimal_pdf()
-    result = await service._call_claude(pdf_bytes, "test.pdf")
 
-    assert result.first_name == "Claude"
-    assert result.last_name == "Test"
-    assert result.date_of_birth == date(2000, 1, 1)
-    service._client.messages.create.assert_called_once()
+    result = await service.extract_patient_data(pdf_bytes, "test.pdf")
+
+    mock_provider.extract.assert_awaited_once_with(pdf_bytes, "test.pdf")
+    assert result.first_name == "Jane"
+    assert result.last_name == "Doe"
+    assert result.date_of_birth == date(1990, 5, 20)
 
 
 @pytest.mark.asyncio
-async def test_call_claude_empty_content() -> None:
-    """_call_claude handles empty response content gracefully."""
-    service = _make_service()
+async def test_extract_patient_data_propagates_provider_exception() -> None:
+    """HTTPException raised by the provider propagates through extract_patient_data."""
+    mock_provider = MagicMock(spec=LLMProvider)
+    mock_provider.extract = AsyncMock(side_effect=HTTPException(status_code=422, detail="extraction failed"))
 
-    mock_response = MagicMock()
-    mock_response.content = []
+    service = DocumentService(mock_provider)
+    pdf_bytes = _make_minimal_pdf()
 
-    service._client.messages.create = AsyncMock(return_value=mock_response)  # type: ignore[assignment]
+    with pytest.raises(HTTPException) as exc_info:
+        await service.extract_patient_data(pdf_bytes, "test.pdf")
 
-    result = await service._call_claude(b"pdf", "test.pdf")
-    assert result.first_name is None
-    assert result.last_name is None
+    assert exc_info.value.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_extract_patient_data_validates_before_calling_provider() -> None:
+    """Validation failures short-circuit before provider.extract is called."""
+    mock_provider = MagicMock(spec=LLMProvider)
+    mock_provider.extract = AsyncMock()
+
+    service = DocumentService(mock_provider)
+    oversized = b"x" * (11 * 1024 * 1024)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.extract_patient_data(oversized, "big.pdf")
+
+    assert exc_info.value.status_code == 422
+    mock_provider.extract.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_extract_patient_data_returns_empty_on_no_json() -> None:
+    """Provider returning non-JSON text results in empty ExtractedPatientData (no crash)."""
+    mock_provider = MagicMock(spec=LLMProvider)
+    mock_provider.extract = AsyncMock(return_value="I cannot find patient data in this document.")
+
+    service = DocumentService(mock_provider)
+    pdf_bytes = _make_minimal_pdf()
+
+    result = await service.extract_patient_data(pdf_bytes, "test.pdf")
+
+    assert result == ExtractedPatientData()
